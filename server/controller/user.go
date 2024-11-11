@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var collection = database.DB.Collection("user")
+var collectionUsr = database.DB.Collection("user")
 var ReqErr = gin.H{"message":"data yang dimasukan tidak sesuai format"}
 
 // register
@@ -25,7 +25,7 @@ func Register(c *gin.Context){
 		return
 	}
 
-	count, err := collection.CountDocuments(context.Background(), bson.M{"username": newUser.Username})
+	count, err := collectionUsr.CountDocuments(context.Background(), bson.M{"username": newUser.Username})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "gagal mencari username"})
 		return
@@ -35,7 +35,7 @@ func Register(c *gin.Context){
 		return
 	}
 
-	_, err = collection.InsertOne(context.Background(), newUser)
+	_, err = collectionUsr.InsertOne(context.Background(), newUser)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"message": "gagal upload data"})
 		return
@@ -53,7 +53,7 @@ func Login(c *gin.Context){
 	}
 
 	var user models.User
-	err = collection.FindOne(context.Background(), bson.M{
+	err = collectionUsr.FindOne(context.Background(), bson.M{
 		"username": checkUser.Username, 
 		"password": checkUser.Password,
 	}).Decode(&user)

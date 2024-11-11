@@ -17,6 +17,7 @@ func main(){
 	router.POST("/register", controller.Register)
 	router.POST("/login", controller.Login)
 	router.GET("/message", middleware.JWTMiddleware(), controller.GetMessage)
+	router.POST("/message", middleware.JWTMiddleware(), controller.PostMessage)
 
 	router.Run(":3000")
 }
