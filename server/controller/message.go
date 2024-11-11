@@ -1,50 +1,54 @@
 package controller
 
 import (
+	"log"
 	"message-app/server/database"
 	"message-app/server/models"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/websocket"
 )
 var collectionMsg = database.DB.Collection("message")
-
-func GetMessage(c *gin.Context){
-	ctx := c.Request.Context()
-	cur, err := collectionMsg.Find(ctx, bson.M{})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "gagal mendapatkan data"})
-		return
-	}
-
-	for cur.Next(ctx){
-		
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "berhasil di akses"})
+var Validate *validator.Validate
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func (r *http.Request)bool{return true},
 }
 
-func PostMessage(c *gin.Context){
+func ChatWS(c *gin.Context){
 	ctx := c.Request.Context()
-	var reqMessage models.Message
-	err := c.BindJSON(&reqMessage)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "gagal bind request"})
+		log.Println("gagal konek ke websocket")
 		return
 	}
-	reqMessage.Timestamp = time.Now()
-	err = validate.Struct(reqMessage)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "data tidak lengkap"})
-		return
-	}
+	defer conn.Close()
 
-	_, err = collectionMsg.InsertOne(ctx, reqMessage)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "gagal kirim pesan"})
-		return
+	for{
+		var reqMessage models.Message
+		err := conn.ReadJSON(&reqMessage)
+		if err != nil {
+			log.Println("gagal membaca models pada connection websocket")
+			break
+		}
+		reqMessage.Timestamp = time.Now()
+		err =	validate.Struct(reqMessage)
+		if err !=  nil {
+			log.Println("datanya blm bener bray")
+			continue
+		}
+		_, err = collectionMsg.InsertOne(ctx, reqMessage)
+		if err != nil {
+			log.Println("gagal masukan data ke database", err)
+			continue
+		}
+		err = conn.WriteJSON(reqMessage)
+		if err != nil {
+			log.Println("error ketika mengirim json ke client", err)
+			break
+		}
 	}
-	c.JSON(http.StatusOK, gin.H{"message": reqMessage})
 }
+
