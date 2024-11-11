@@ -6,7 +6,7 @@ import (
 
 type User struct {
 	Username string `json:"username" validate:"required"`
-	Password string `json:"password" validat:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type Message struct {
